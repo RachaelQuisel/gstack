@@ -113,6 +113,13 @@ describe('Sidebar prompt injection defense', () => {
     expect(AGENT_SRC).toContain('const { prompt, args, stateFile, cwd, tabId } = queueEntry');
   });
 
+  test('server includes Write in allowedTools', () => {
+    // Write doesn't expand attack surface beyond what Bash already provides.
+    // The server args are passed through the queue to sidebar-agent, so
+    // Write must be here (not just in the agent fallback) to take effect.
+    expect(SERVER_SRC).toContain("'--allowedTools', 'Bash,Read,Glob,Grep,Write'");
+  });
+
   test('sidebar-agent falls back to defaults if queue has no args', () => {
     // Backward compatibility: if old queue entries lack args, use defaults
     expect(AGENT_SRC).toContain("'--allowedTools', 'Bash,Read,Glob,Grep,Write'");
