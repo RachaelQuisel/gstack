@@ -65,6 +65,11 @@ tool matches the logical name below — do not hardcode the server id.
 | Draft a message for approval | `slack_send_message_draft` |
 | Schedule a message | `slack_schedule_message` |
 
+These `slack_*` tools must be **permitted at runtime** — they aren't in this skill's
+`allowed-tools` because their real names carry an environment-specific server prefix
+that can't be listed statically. If a Slack call is denied, ask Rachael to allow the
+Slack MCP tools, then continue.
+
 If the Slack MCP server is not connected, tell Rachael which scopes to grant
 (`search:read`, `channels:history`, `groups:history`, `im:history`, `mpim:history`,
 `canvases:write`, `chat:write`) and stop — do not fabricate a brief.
@@ -135,8 +140,8 @@ printf '%s.000000\n' "$(( $(date +%s) - 86400 ))"
 ```
 
 - Pull `is:saved` via `slack_search_public_and_private` (powers the Saved column).
-- Pull Rachael's `@mentions`: search `<@U09S4B44BS8>` (use the self `user_id` from
-  `scope.json`) scoped to the last 24h.
+- Pull Rachael's `@mentions`: search for `<@SELF_USER_ID>`, substituting the self
+  `user_id` from `scope.json`, scoped to the last 24h.
 - For any channel/DM with an **active thread**, call `slack_read_thread` so the brief
   captures both sides, not just the parent message.
 - Skip exclusions. For watchlist entries, only surface if there is fresh activity.
@@ -191,9 +196,8 @@ Cache the result and merge it into the daily Canvas.
    pass per signal term). Use the keywords and filters from
    `scope.json.educational_mining`: `tip`, `TIL`, `how to`, `lesson`, `gotcha`,
    `best practice`, `trick`, `walkthrough`, `skill`, plus `has:link`.
-2. **Boost** high-signal channels (`#xr_learn`, `#xr_ai-discuss`, `#xr_marketing`)
-   and senior authors (Tom, Mark, Aris, Dylan, Myron) per `boost_channels` /
-   `boost_authors`.
+2. **Boost** the high-signal channels and senior authors listed in
+   `scope.json.educational_mining` → `boost_channels` / `boost_authors`.
 3. **Dedupe** across passes (same permalink = one item). **Rank** by reactions,
    recency, and author weight. Keep the top N (`keep_top_n`, default 8).
 4. **Summarize** each into a "Worth learning" entry: one-line takeaway + source
