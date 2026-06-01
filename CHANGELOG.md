@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.3.0] - 2026-06-01 — Daily Slack Brief & Dashboard
+
+Wake up to one private dashboard that already read your Slack for you. The new `/slack-daily-brief` skill rolls up your scoped channels, DMs, saved items, and @mentions into a morning brief, then keeps a private Slack Canvas current — sorted into what needs you, what's in motion, what you saved and haven't closed, and what's quiet but worth noting. A weekly pass mines years of workspace history for genuinely useful past knowledge and folds it into a "Worth learning" section. Because chat can't wake itself, it runs in Claude Code on a `/loop` and `/schedule` cadence.
+
+### Added
+
+- **`/slack-daily-brief` skill.** Reads the last 24h across your scoped channels and DMs, expands active threads so you get both sides, buckets everything into Needs attention / In motion / Saved and unresolved / Quiet but noted, and writes the brief in your voice — leading with the problem and context, not a transcript.
+- **Self-refreshing private dashboard Canvas.** Each run rewrites one Canvas idempotently (full replace, never append) on your own private DM canvas, with working Slack permalinks and a last-refreshed stamp. It never lands in a shared client or team channel.
+- **Weekly "Worth learning" mining.** A weekly multi-pass keyword sweep over full history surfaces tips, gotchas, and walkthroughs, ranked by reactions, recency, and author, cached so the daily run stays fast.
+- **Draft-first messaging.** Replies and sends are drafted for your approval and routed through the humanizing skill — no client-facing message goes out without explicit per-message or per-template opt-in.
+- **`scope.json` config.** Your channels, DMs, watchlist, exclusions, Canvas home, and mining settings live in one editable file, with a `scope.example.json` template for anyone else setting it up.
+
 ## [0.15.2.0] - 2026-04-02 — Voice-Friendly Skill Triggers
 
 Say "run a security check" instead of remembering `/cso`. Skills now have voice-friendly trigger phrases that work with AquaVoice, Whisper, and other speech-to-text tools. No more fighting with acronyms that get transcribed wrong ("CSO" -> "CEO" -> wrong skill).
