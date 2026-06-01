@@ -1,0 +1,44 @@
+{
+  "workspace": "your-workspace.slack.com",
+  "self": {
+    "name": "Your Name",
+    "user_id": "U00000000"
+  },
+  "canvas": {
+    "home": "self_dm",
+    "comment": "self_dm = your own DM canvas (private). Or set to private_channel and add channel_id.",
+    "canvas_id": null,
+    "title": "Your Name — Daily Slack Brief"
+  },
+  "scope": {
+    "client_huddles": [
+      { "name": "#example-client", "id": "C00000000" }
+    ],
+    "internal": [
+      { "name": "#team-channel", "id": "C00000001" }
+    ],
+    "key_dms": [
+      { "name": "Person Name", "user_id": "U00000001", "dm_id": "D00000001" }
+    ]
+  },
+  "watchlist": [
+    { "name": "Dormant client", "status": "quiet", "note": "Surface only if activity resumes." }
+  ],
+  "exclusions": [
+    { "name": "Dropped channel", "reason": "Why it's out of scope." }
+  ],
+  "educational_mining": {
+    "cadence": "weekly",
+    "keywords": ["tip", "TIL", "how to", "lesson", "gotcha", "best practice", "trick", "walkthrough", "skill"],
+    "extra_filters": ["has:link"],
+    "boost_channels": ["C00000001"],
+    "boost_authors": ["Senior Person"],
+    "keep_top_n": 8,
+    "cache_file": "educational_cache.json"
+  },
+  "autosend": {
+    "policy": "draft_first",
+    "comment": "No auto-send by default. Drafts only until explicitly opted in per-template.",
+    "allowed_templates": []
+  }
+}
