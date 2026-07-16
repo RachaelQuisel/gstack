@@ -106,18 +106,18 @@ of \`/qa\`, \`/gstack-ship\` instead of \`/ship\`). Disk paths are unaffected â€
 If output shows \`UPGRADE_AVAILABLE <old> <new>\`: read \`${ctx.paths.skillRoot}/gstack-upgrade/SKILL.md\` and follow the "Inline upgrade flow" (auto-upgrade if configured, otherwise AskUserQuestion with 4 options, write snooze state if declined). If \`JUST_UPGRADED <from> <to>\`: tell user "Running gstack v{to} (just updated!)" and continue.`;
 }
 
-function generateLakeIntro(): string {
+function generateLakeIntro(ctx: TemplateContext): string {
   return `If \`LAKE_INTRO\` is \`no\`: Before continuing, introduce the Completeness Principle.
 Tell the user: "gstack follows the **Boil the Lake** principle â€” always do the complete
 thing when AI makes the marginal cost near-zero. Read more: https://garryslist.org/posts/boil-the-ocean"
 Then offer to open the essay in their default browser:
 
 \`\`\`bash
-open https://garryslist.org/posts/boil-the-ocean
+${ctx.paths.binDir}/gstack-open-url https://garryslist.org/posts/boil-the-ocean
 touch ~/.gstack/.completeness-intro-seen
 \`\`\`
 
-Only run \`open\` if the user says yes. Always run \`touch\` to mark as seen. This only happens once.`;
+Only run \`gstack-open-url\` if the user says yes. Always run \`touch\` to mark as seen. This only happens once.`;
 }
 
 function generateTelemetryPrompt(ctx: TemplateContext): string {
@@ -644,7 +644,7 @@ export function generatePreamble(ctx: TemplateContext): string {
   const sections = [
     generatePreambleBash(ctx),
     generateUpgradeCheck(ctx),
-    generateLakeIntro(),
+    generateLakeIntro(ctx),
     generateTelemetryPrompt(ctx),
     generateProactivePrompt(ctx),
     generateRoutingInjection(ctx),

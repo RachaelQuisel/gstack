@@ -110,11 +110,11 @@ thing when AI makes the marginal cost near-zero. Read more: https://garryslist.o
 Then offer to open the essay in their default browser:
 
 ```bash
-open https://garryslist.org/posts/boil-the-ocean
+~/.claude/skills/gstack/bin/gstack-open-url https://garryslist.org/posts/boil-the-ocean
 touch ~/.gstack/.completeness-intro-seen
 ```
 
-Only run `open` if the user says yes. Always run `touch` to mark as seen. This only happens once.
+Only run `gstack-open-url` if the user says yes. Always run `touch` to mark as seen. This only happens once.
 
 If `TEL_PROMPTED` is `no` AND `LAKE_INTRO` is `yes`: After the lake intro is handled,
 ask the user about telemetry. Use AskUserQuestion:

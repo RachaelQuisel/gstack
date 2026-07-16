@@ -475,15 +475,14 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 **Priority:** P2
 **Depends on:** None
 
-### Cross-platform URL open helper
+### Cross-platform URL open helper — SHIPPED
 
-**What:** `gstack-open-url` helper script — detect platform, use `open` (macOS) or `xdg-open` (Linux).
+~~**What:** `gstack-open-url` helper script — detect platform, use `open` (macOS) or `xdg-open` (Linux).~~
 
-**Why:** The first-time Completeness Principle intro uses macOS `open` to launch the essay. If gstack ever supports Linux, this silently fails.
+`bin/gstack-open-url` handles macOS (`open`), Linux (`xdg-open`), and Windows (`start`), falling back to printing the URL in headless environments. The first-time Completeness Principle intro (`generateLakeIntro()` in `scripts/resolvers/preamble.ts`) now calls the helper instead of hardcoded `open`, so the essay launch no longer silently fails on Linux/Windows.
 
-**Effort:** S (human: ~30 min / CC: ~2 min)
-**Priority:** P4
 **Depends on:** Nothing
+**Completed:** v0.15.2.0
 
 ### CDP-based DOM mutation detection for ref staleness
 
