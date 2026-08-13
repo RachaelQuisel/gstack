@@ -45,6 +45,17 @@ problem plus context, and never leak candid notes into a shared place.
 3. **Search is keyword-only.** This workspace has no semantic search and no boolean
    OR/NOT — terms are AND-joined. Build topic and educational mining as multi-pass
    keyword sweeps with dedupe, not one clever query.
+4. **Never fabricate a permalink.** Every link in the brief and Canvas must be built
+   from a real `message_ts` you actually pulled this run. If you have an item's text
+   but not its `message_ts`, re-read the channel in `detailed` format to get it, or
+   drop the link entirely — never synthesize a `p<timestamp>` URL. A made-up permalink
+   is worse than no link.
+5. **Trust the real clock, and don't surface stale as fresh.** Stamp the Canvas with
+   the actual current date (if a sandbox `date` looks wrong, prefer the real date over
+   a skewed shell value). Distinguish genuinely new activity from old unresolved
+   backlog — an item from weeks ago belongs in "Saved and unresolved" or gets dropped
+   if resolved, not in "Needs attention" as if it just landed. When in doubt about
+   whether an older ask is still open, check the thread before promoting it.
 
 ---
 
