@@ -103,6 +103,16 @@ describe('Sidebar prompt injection defense', () => {
     expect(SERVER_SRC).toContain('refuse');
   });
 
+  // --- Allowed Tools (server + agent must stay in sync) ---
+
+  test('server allowedTools includes Write', () => {
+    // Write does not expand attack surface beyond Bash (which can already
+    // write files). The server args are the source of truth — if Write is
+    // missing here, the sidebar agent cannot use it even if the agent
+    // fallback includes it, because the server-provided args take precedence.
+    expect(SERVER_SRC).toContain("'--allowedTools', 'Bash,Read,Glob,Grep,Write'");
+  });
+
   // --- Sidebar Agent Arg Plumbing ---
 
   test('sidebar-agent uses queued args from server, not hardcoded', () => {
