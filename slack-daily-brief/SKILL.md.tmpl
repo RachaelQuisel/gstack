@@ -180,18 +180,35 @@ Emit the brief as markdown, grouped by the four buckets, newest-relevant first.
 
 ### 4. Refresh the dashboard Canvas
 
-Rewrite the **entire** Canvas body via `slack_update_canvas` (idempotent full
-replace — do not append). Use the `canvas_id` from `scope.json`. Sections:
+The Canvas is a living checklist Rachael works from, so a run **reconciles** it rather
+than blindly overwriting it. Order matters:
 
-- **Needs attention** — the action queue, each item linking to its Slack permalink
-- **Important conversations** — In motion + the threads that matter
-- **Saved items** — `is:saved`, with permalinks
-- **Worth learning** — merged in from `educational_cache.json` (see weekly sweep)
+1. **Read the current Canvas first** with `slack_read_canvas` (use the `canvas_id` from
+   `scope.json`). This gives you the current items and their checked state, plus the
+   fresh `section_id` mapping you need to edit — section IDs change after every update,
+   so never reuse stale ones.
+2. **Drop anything Rachael checked off.** A ticked item (`[x]`) means she's done with it;
+   omit it from the rewrite so it disappears. Unchecked items (`[ ]`) carry forward.
+3. **Merge in new activity** from this run, deduped against what's already there (same
+   permalink = same item). Don't resurrect an item she just checked off unless there's
+   genuinely new activity on it.
+4. **Write it back** with `slack_update_canvas`, replacing each section's body against
+   the section IDs from step 1.
 
-Stamp the top of the Canvas with the last-refreshed time:
+Sections, each header carrying a status marker and each item a tickable checkbox
+(`- [ ] …`) so Rachael can dismiss anything:
+
+- `## :red_circle: Needs attention` — the action queue, each item linking to its permalink
+- `## :large_yellow_circle: Important conversations` — In motion + the threads that matter
+- `## :bookmark: Saved and unresolved` — `is:saved`, with permalinks
+- `## :crescent_moon: Quiet but noted` — watchlist stirrings, low-signal mentions
+- `## :books: Worth learning` — merged in from `educational_cache.json` (see weekly sweep)
+
+Stamp the intro line with the last-refreshed date, and tell Rachael she can tick any item
+off to have it drop at the next refresh. Use the **real** current date (see hard gate 5):
 
 ```bash
-date '+Last refreshed: %Y-%m-%d %H:%M %Z'
+date '+Last refreshed: %Y-%m-%d'
 ```
 
 Confirm the write landed and report the Canvas permalink.
