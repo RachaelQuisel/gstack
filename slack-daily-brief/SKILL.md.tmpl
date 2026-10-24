@@ -130,11 +130,23 @@ Run once, or when scope changes.
 2. **Confirm scope.** Show the channels, DMs, watchlist, and exclusions from
    `scope.json`. Ask via AskUserQuestion whether to confirm or prune any. Persist
    edits back to `scope.json`.
-3. **Create the private Canvas once.** Only if `canvas.canvas_id` is null:
-   - Confirm the destination is private (`self_dm`, or a private channel only Rachael
-     is in). Restate the HARD GATE.
-   - Call `slack_create_canvas` with the title from `scope.json` and a placeholder body.
-   - Write the returned `canvas_id` back into `scope.json` → `canvas.canvas_id`.
+3. **Create the private Canvas once, and don't make a second one.** Only if
+   `canvas.canvas_id` is null:
+   - **Guard against duplicates first.** An earlier setup may have created the Canvas
+     but been interrupted before saving its id. Search for an existing canvas with this
+     title (`slack_search_public_and_private` / `slack_read_canvas`); if one exists,
+     reuse its id and skip creation rather than orphaning a second dashboard.
+   - **Know what the tool makes.** `slack_create_canvas` takes only a title and body and
+     returns a **standalone canvas owned by Rachael** — that *is* the `self_dm` home, and
+     it is private by default. It has no argument to target a channel, so a
+     `private_channel` home can't be created this way: stop and ask Rachael to place it,
+     or keep the home `self_dm`. Restate the privacy HARD GATE before writing.
+   - **Create the full section skeleton, not a placeholder.** Seed it with all five
+     headers (`## :red_circle: Needs attention` through `## :books: Worth learning`),
+     each with an empty checklist, so the first daily refresh has real sections to
+     replace.
+   - Write the returned `canvas_id` back into `scope.json` → `canvas.canvas_id`
+     immediately, then re-read `scope.json` to confirm it persisted before continuing.
 4. Report the Canvas permalink so Rachael can bookmark it.
 
 If `canvas_id` already exists, skip creation — daily runs reuse it.
@@ -245,11 +257,13 @@ Cache the result and merge it into the daily Canvas.
 ```bash
 SKILL_DIR="$HOME/.claude/skills/slack-daily-brief"
 [ -d "$SKILL_DIR" ] || SKILL_DIR=".claude/skills/slack-daily-brief"
-# Is the cache stale (>7 days) or missing? Then a sweep is due.
+# Is the cache 7+ days old or missing? Then a sweep is due. Use -mtime +6, not +7:
+# find truncates age to whole days, so +7 only matches at 8 days and a weekly
+# schedule would skip every other run. +6 matches a cache that is 7 days old.
 CACHE="$SKILL_DIR/educational_cache.json"
 if [ -f "$CACHE" ]; then
-  find "$SKILL_DIR" -maxdepth 1 -name 'educational_cache.json' -mtime +7 -print | grep -q . \
-    && echo "SWEEP_DUE: cache older than 7 days" || echo "SWEEP_FRESH"
+  find "$SKILL_DIR" -maxdepth 1 -name 'educational_cache.json' -mtime +6 -print | grep -q . \
+    && echo "SWEEP_DUE: cache 7+ days old" || echo "SWEEP_FRESH"
 else
   echo "SWEEP_DUE: no cache yet"
 fi
