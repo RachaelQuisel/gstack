@@ -1,8 +1,8 @@
 /**
- * Sidebar prompt injection defense tests
+ * Sidebar security and configuration tests
  *
  * Validates: XML escaping, command allowlist in system prompt,
- * Opus model default, and sidebar-agent arg plumbing.
+ * Opus model default, allowed tools, and sidebar-agent arg plumbing.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -19,7 +19,7 @@ const AGENT_SRC = fs.readFileSync(
   'utf-8',
 );
 
-describe('Sidebar prompt injection defense', () => {
+describe('Sidebar security and configuration', () => {
   // --- XML Framing ---
 
   test('system prompt uses XML framing with <system> tags', () => {
