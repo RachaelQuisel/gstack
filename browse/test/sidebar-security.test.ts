@@ -110,7 +110,9 @@ describe('Sidebar prompt injection defense', () => {
     // write files). The server args are the source of truth — if Write is
     // missing here, the sidebar agent cannot use it even if the agent
     // fallback includes it, because the server-provided args take precedence.
-    expect(SERVER_SRC).toContain("'--allowedTools', 'Bash,Read,Glob,Grep,Write'");
+    //
+    // Match inside an array literal to avoid false positives from comments.
+    expect(SERVER_SRC).toMatch(/'--allowedTools',\s*'Bash,Read,Glob,Grep,Write'/);
   });
 
   // --- Sidebar Agent Arg Plumbing ---
