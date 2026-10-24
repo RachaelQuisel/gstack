@@ -50,12 +50,18 @@ problem plus context, and never leak candid notes into a shared place.
    but not its `message_ts`, re-read the channel in `detailed` format to get it, or
    drop the link entirely — never synthesize a `p<timestamp>` URL. A made-up permalink
    is worse than no link.
-5. **Trust the real clock, and don't surface stale as fresh.** Stamp the Canvas with
+5. **Only a tick-off removes an item; staleness never does.** The checkbox is
+   Rachael's, not yours. An item she left unchecked stays visible every run until she
+   ticks it, no matter how old it is. When an older unchecked item looks stale, you may
+   demote it (move it to a lower bucket) and tag it `*Carried:*`, optionally noting it
+   may be resolved — but you never silently drop it. Dropping is reserved for items she
+   checked off. When in doubt whether an old ask is still open, keep it and flag it, do
+   not remove it.
+6. **Trust the real clock, and don't surface stale as fresh.** Stamp the Canvas with
    the actual current date (if a sandbox `date` looks wrong, prefer the real date over
-   a skewed shell value). Distinguish genuinely new activity from old unresolved
-   backlog — an item from weeks ago belongs in "Saved and unresolved" or gets dropped
-   if resolved, not in "Needs attention" as if it just landed. When in doubt about
-   whether an older ask is still open, check the thread before promoting it.
+   a skewed shell value). Distinguish genuinely new activity from old carried backlog —
+   lead each section with what's new, and let the `*Carried:*` items sit below it rather
+   than posing as fresh.
 
 ---
 
@@ -187,11 +193,14 @@ than blindly overwriting it. Order matters:
    `scope.json`). This gives you the current items and their checked state, plus the
    fresh `section_id` mapping you need to edit — section IDs change after every update,
    so never reuse stale ones.
-2. **Drop anything Rachael checked off.** A ticked item (`[x]`) means she's done with it;
-   omit it from the rewrite so it disappears. Unchecked items (`[ ]`) carry forward.
+2. **Drop only what Rachael checked off.** A ticked item (`[x]`) means she's done with
+   it; omit it so it disappears. **Every unchecked item (`[ ]`) carries forward — no
+   exceptions, however old.** You never delete an unchecked item for being stale (see
+   hard gate 5); at most you demote it to a lower bucket and tag it `*Carried:*`.
 3. **Merge in new activity** from this run, deduped against what's already there (same
-   permalink = same item). Don't resurrect an item she just checked off unless there's
-   genuinely new activity on it.
+   permalink = same item). Lead each section with the new items and let carried ones sit
+   below. Don't resurrect an item she just checked off unless there's genuinely new
+   activity on it.
 4. **Write it back** with `slack_update_canvas`, replacing each section's body against
    the section IDs from step 1.
 
