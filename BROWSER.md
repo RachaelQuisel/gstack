@@ -220,7 +220,7 @@ Or do it manually:
 
 ### Sidebar agent
 
-The Chrome side panel includes a chat interface. Type a message and a child Claude instance executes it in the browser. The sidebar agent has access to `Bash`, `Read`, `Glob`, and `Grep` tools (same as Claude Code, minus `Edit` and `Write` ... read-only by design).
+The Chrome side panel includes a chat interface. Type a message and a child Claude instance executes it in the browser. The sidebar agent has access to `Bash`, `Read`, `Glob`, `Grep`, and `Write` tools (same as Claude Code, minus `Edit`).
 
 **How it works:**
 

@@ -1,8 +1,8 @@
 /**
- * Sidebar prompt injection defense tests
+ * Sidebar security and configuration tests
  *
  * Validates: XML escaping, command allowlist in system prompt,
- * Opus model default, and sidebar-agent arg plumbing.
+ * Opus model default, allowed tools, and sidebar-agent arg plumbing.
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -19,7 +19,7 @@ const AGENT_SRC = fs.readFileSync(
   'utf-8',
 );
 
-describe('Sidebar prompt injection defense', () => {
+describe('Sidebar security and configuration', () => {
   // --- XML Framing ---
 
   test('system prompt uses XML framing with <system> tags', () => {
@@ -101,6 +101,18 @@ describe('Sidebar prompt injection defense', () => {
   test('system prompt instructs to refuse prompt injection', () => {
     expect(SERVER_SRC).toContain('prompt injection');
     expect(SERVER_SRC).toContain('refuse');
+  });
+
+  // --- Allowed Tools (server + agent must stay in sync) ---
+
+  test('server allowedTools includes Write', () => {
+    // Write does not expand attack surface beyond Bash (which can already
+    // write files). The server args are the source of truth — if Write is
+    // missing here, the sidebar agent cannot use it even if the agent
+    // fallback includes it, because the server-provided args take precedence.
+    //
+    // Match inside an array literal to avoid false positives from comments.
+    expect(SERVER_SRC).toMatch(/'--allowedTools',\s*'Bash,Read,Glob,Grep,Write'/);
   });
 
   // --- Sidebar Agent Arg Plumbing ---
