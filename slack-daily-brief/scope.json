@@ -2,7 +2,8 @@
   "workspace": "xraytech.slack.com",
   "self": {
     "name": "Rachael",
-    "user_id": "U09S4B44BS8"
+    "user_id": "U09S4B44BS8",
+    "role": "Solution Delivery & Modern Stack"
   },
   "canvas": {
     "home": "self_dm",
@@ -12,8 +13,10 @@
   },
   "scope": {
     "client_huddles": [
-      { "name": "#huddle_aymedia", "id": "C09S4B9ANR2" },
-      { "name": "#huddle_coding-clarified", "id": "C0AGHQ4E7D5" }
+      { "name": "#huddle_guardians_of_love", "id": "C0B0BPCRVL0", "note": "GoL — most active; Acuity/Airtable sync, training reminders." },
+      { "name": "#huddle_ccres", "id": "C09CZ718GFJ", "note": "CCRES — GrantPoint/ScholarPoint/MatchPoint." },
+      { "name": "#huddle_king", "id": "C0C7DMX56SH", "note": "King Inc. — Rachael is assigned engineer; workload-projection MVP." },
+      { "name": "#huddle_coding-clarified", "id": "C0AGHQ4E7D5", "note": "Unfrozen (paid Oct 13); posture call + Blackboard API still open." }
     ],
     "xray_internal": [
       { "name": "#xr_workflow_consultants", "id": "C01JQLRHCJK" },
@@ -27,9 +30,13 @@
     "key_dms": [
       { "name": "Aris Mantopoulos", "user_id": "U025PCK7PK4", "dm_id": "D09RKBL4GET" },
       { "name": "Mark Campos", "user_id": "U01JHV4U1LP", "dm_id": "D09UD0C574N" }
+    ],
+    "briefing_sources": [
+      { "name": "XRAY Inbox daily brief", "dm_id": "D0ANG0Y16PP", "note": "Automated daily brief bot. Read for signal, but complement it — don't just echo it." }
     ]
   },
   "watchlist": [
+    { "name": "#huddle_aymedia", "id": "C09S4B9ANR2", "status": "quiet", "note": "No recent activity. Surface only if it resumes." },
     { "name": "HOPE for Health huddles", "status": "quiet", "note": "No recent activity. Surface only if activity resumes." }
   ],
   "exclusions": [
@@ -39,7 +46,7 @@
     "cadence": "weekly",
     "keywords": ["tip", "TIL", "how to", "lesson", "gotcha", "best practice", "trick", "walkthrough", "skill"],
     "extra_filters": ["has:link"],
-    "boost_channels": ["C08C56PU8C9", "C04DP1H8R26", "C01BV2VNLJW"],
+    "boost_channels": ["C08C56PU8C9", "C04DP1H8R26", "C01JQLRHCJK"],
     "boost_authors": ["Tom", "Mark", "Aris", "Dylan", "Myron"],
     "keep_top_n": 8,
     "cache_file": "educational_cache.json"
