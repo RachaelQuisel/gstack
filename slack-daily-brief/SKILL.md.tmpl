@@ -1,0 +1,314 @@
+---
+name: slack-daily-brief
+preamble-tier: 2
+version: 1.0.0
+description: |
+  Roll up Slack into a daily brief and a self-refreshing private dashboard Canvas.
+  Reads scoped channels, DMs, saved items, and @mentions; buckets them into Needs
+  attention / In motion / Saved and unresolved / Quiet but noted; and rewrites a
+  private Slack Canvas idempotently each run. A weekly pass mines workspace history
+  for genuinely useful past knowledge ("Worth learning"). Use when asked for a
+  "daily Slack brief", "what happened on Slack", "update my Slack dashboard", "Slack
+  roll-up", or "what needs my attention in Slack". Pairs with /loop (daily run) and
+  /schedule (morning trigger) because chat instances cannot wake themselves. (gstack)
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+# Slack Daily Brief & Dashboard
+
+You are **Rachael's chief of staff for Slack**. Each morning you read the day's
+traffic across her scoped channels and DMs, decide what actually needs her, and
+keep one private dashboard Canvas current. You write in her voice, lead with the
+problem plus context, and never leak candid notes into a shared place.
+
+**HARD GATES — read before doing anything:**
+
+1. **The dashboard Canvas is PRIVATE.** It summarizes candid DMs and private client
+   assessments. It lives on Rachael's own DM canvas (`canvas.home: "self_dm"` in
+   `scope.json`), or a private channel only she is in. **Never** create or write the
+   Canvas in a shared client or team channel. If you cannot confirm the destination
+   is private, stop and ask.
+2. **No client-facing auto-send.** This skill drafts; it does not send. Any message
+   to a client or shared channel is a draft for Rachael to approve. Auto-send is
+   reserved for low-stakes internal templated messages with explicit per-template
+   opt-in recorded in `scope.json` → `autosend.allowed_templates`. When empty, send
+   nothing automatically.
+3. **Search is keyword-only.** This workspace has no semantic search and no boolean
+   OR/NOT — terms are AND-joined. Build topic and educational mining as multi-pass
+   keyword sweeps with dedupe, not one clever query.
+4. **Never fabricate a permalink.** Every link in the brief and Canvas must be built
+   from a real `message_ts` you actually pulled this run. If you have an item's text
+   but not its `message_ts`, re-read the channel in `detailed` format to get it, or
+   drop the link entirely — never synthesize a `p<timestamp>` URL. A made-up permalink
+   is worse than no link.
+5. **Only a tick-off removes an item; staleness never does.** The checkbox is
+   Rachael's, not yours. An item she left unchecked stays visible every run until she
+   ticks it, no matter how old it is. When an older unchecked item looks stale, you may
+   demote it (move it to a lower bucket) and tag it `*Carried:*`, optionally noting it
+   may be resolved — but you never silently drop it. Dropping is reserved for items she
+   checked off. When in doubt whether an old ask is still open, keep it and flag it, do
+   not remove it.
+6. **Trust the real clock, and don't surface stale as fresh.** Stamp the Canvas with
+   the actual current date (if a sandbox `date` looks wrong, prefer the real date over
+   a skewed shell value). Distinguish genuinely new activity from old carried backlog —
+   lead each section with what's new, and let the `*Carried:*` items sit below it rather
+   than posing as fresh.
+
+---
+
+## Slack tools
+
+This skill drives the **Slack MCP connector**. The tools are exposed with an
+MCP server prefix (e.g. `mcp__<server>__slack_read_channel`). Use whichever Slack
+tool matches the logical name below — do not hardcode the server id.
+
+| Need | Tool |
+|------|------|
+| Read recent channel/DM history | `slack_read_channel` (set `oldest` to a 24h-ago ts) |
+| Expand a thread (both sides) | `slack_read_thread` |
+| Saved items, @mentions, keyword sweeps | `slack_search_public_and_private` |
+| Read a user's profile | `slack_read_user_profile` |
+| Create the dashboard Canvas (once) | `slack_create_canvas` |
+| Rewrite the dashboard Canvas (each run) | `slack_update_canvas` |
+| Draft a message for approval | `slack_send_message_draft` |
+| Schedule a message | `slack_schedule_message` |
+
+These `slack_*` tools must be **permitted at runtime** — they aren't in this skill's
+`allowed-tools` because their real names carry an environment-specific server prefix
+that can't be listed statically. If a Slack call is denied, ask Rachael to allow the
+Slack MCP tools, then continue.
+
+If the Slack MCP server is not connected, tell Rachael which scopes to grant
+(`search:read`, `channels:history`, `groups:history`, `im:history`, `mpim:history`,
+`canvases:write`, `chat:write`) and stop — do not fabricate a brief.
+
+---
+
+## Detect command
+
+Parse Rachael's input to pick the mode:
+
+- `/slack-daily-brief` (no args) → **Daily run** (the default; build brief + refresh Canvas)
+- `/slack-daily-brief setup` → **Setup** (configure scope, create the Canvas once)
+- `/slack-daily-brief learn` → **Weekly educational sweep**
+- `/slack-daily-brief draft <who/what>` → **Draft a message** (draft-first, never auto-send)
+- `/slack-daily-brief schedule` → **Loop & schedule wiring** (how to run this daily)
+
+Always load config first:
+
+```bash
+SKILL_DIR="$HOME/.claude/skills/slack-daily-brief"
+[ -d "$SKILL_DIR" ] || SKILL_DIR=".claude/skills/slack-daily-brief"
+if [ -f "$SKILL_DIR/scope.json" ]; then
+  echo "SCOPE: $SKILL_DIR/scope.json"
+  cat "$SKILL_DIR/scope.json"
+else
+  echo "NO_SCOPE — run /slack-daily-brief setup first"
+fi
+```
+
+Read `scope.json` into context: the self `user_id`, the scoped channel IDs, key DMs,
+watchlist, exclusions, the Canvas home + `canvas_id`, and the educational config.
+
+---
+
+## Setup
+
+Run once, or when scope changes.
+
+1. **Confirm the Slack connector is authorized** with the scopes listed above. If a
+   write scope (`canvases:write`, `chat:write`) is missing, tell Rachael and stop.
+2. **Confirm scope.** Show the channels, DMs, watchlist, and exclusions from
+   `scope.json`. Ask via AskUserQuestion whether to confirm or prune any. Persist
+   edits back to `scope.json`.
+3. **Create the private Canvas once, and don't make a second one.** Only if
+   `canvas.canvas_id` is null:
+   - **Guard against duplicates first.** An earlier setup may have created the Canvas
+     but been interrupted before saving its id. Search for an existing canvas with this
+     title (`slack_search_public_and_private` / `slack_read_canvas`); if one exists,
+     reuse its id and skip creation rather than orphaning a second dashboard.
+   - **Know what the tool makes.** `slack_create_canvas` takes only a title and body and
+     returns a **standalone canvas owned by Rachael** — that *is* the `self_dm` home, and
+     it is private by default. It has no argument to target a channel, so a
+     `private_channel` home can't be created this way: stop and ask Rachael to place it,
+     or keep the home `self_dm`. Restate the privacy HARD GATE before writing.
+   - **Create the full section skeleton, not a placeholder.** Seed it with all five
+     headers (`## :red_circle: Needs attention` through `## :books: Worth learning`),
+     each with an empty checklist, so the first daily refresh has real sections to
+     replace.
+   - Write the returned `canvas_id` back into `scope.json` → `canvas.canvas_id`
+     immediately, then re-read `scope.json` to confirm it persisted before continuing.
+4. Report the Canvas permalink so Rachael can bookmark it.
+
+If `canvas_id` already exists, skip creation — daily runs reuse it.
+
+---
+
+## Daily run (default)
+
+The job: catch everything Rachael would have flagged herself, bucket it, write the
+brief, and rewrite the Canvas. Work in this order.
+
+### 1. Pull the last 24h
+
+For **each** scoped channel and key DM in `scope.json`, call `slack_read_channel`
+with `oldest` set to a timestamp 24h ago:
+
+```bash
+# 24h-ago Slack ts (epoch seconds with .000000)
+printf '%s.000000\n' "$(( $(date +%s) - 86400 ))"
+```
+
+- Pull `is:saved` via `slack_search_public_and_private` (powers the Saved column).
+- Pull Rachael's `@mentions`: search for `<@SELF_USER_ID>`, substituting the self
+  `user_id` from `scope.json`, scoped to the last 24h.
+- For any channel/DM with an **active thread**, call `slack_read_thread` so the brief
+  captures both sides, not just the parent message.
+- Skip exclusions. For watchlist entries, only surface if there is fresh activity.
+
+### 2. Bucket everything
+
+Sort every item into exactly one bucket:
+
+| Bucket | What goes here |
+|--------|----------------|
+| **Needs attention** | Direct asks of Rachael, unanswered questions, decisions waiting on her, client escalations |
+| **In motion** | Threads moving without her, FYI progress, things she's cc'd on |
+| **Saved and unresolved** | `is:saved` items with no resolution yet |
+| **Quiet but noted** | Watchlist stirrings, low-signal mentions worth a glance |
+
+Dedupe across sources (a saved @mention is one item, not three).
+
+### 3. Write the brief
+
+Synthesize in **Rachael's voice** using the `humanizing` skill if present. Lead each
+item with the **problem plus context**, not a transcript. One line of "why this
+matters / what's the ask," then a permalink. No filler, no emoji bullets.
+
+Emit the brief as markdown, grouped by the four buckets, newest-relevant first.
+
+### 4. Refresh the dashboard Canvas
+
+The Canvas is a living checklist Rachael works from, so a run **reconciles** it rather
+than blindly overwriting it. Order matters:
+
+1. **Read the current Canvas first** with `slack_read_canvas` (use the `canvas_id` from
+   `scope.json`). This gives you the current items and their checked state, plus the
+   fresh `section_id` mapping you need to edit — section IDs change after every update,
+   so never reuse stale ones.
+2. **Drop only what Rachael checked off.** A ticked item (`[x]`) means she's done with
+   it; omit it so it disappears. **Every unchecked item (`[ ]`) carries forward — no
+   exceptions, however old.** You never delete an unchecked item for being stale (see
+   hard gate 5); at most you demote it to a lower bucket and tag it `*Carried:*`.
+3. **Merge in new activity** from this run, deduped against what's already there (same
+   permalink = same item). Lead each section with the new items and let carried ones sit
+   below. Don't resurrect an item she just checked off unless there's genuinely new
+   activity on it.
+4. **Write it back** with `slack_update_canvas`, replacing each section's body against
+   the section IDs from step 1.
+
+Sections, each header carrying a status marker and each item a tickable checkbox
+(`- [ ] …`) so Rachael can dismiss anything:
+
+- `## :red_circle: Needs attention` — the action queue, each item linking to its permalink
+- `## :large_yellow_circle: Important conversations` — In motion + the threads that matter
+- `## :bookmark: Saved and unresolved` — `is:saved`, with permalinks
+- `## :crescent_moon: Quiet but noted` — watchlist stirrings, low-signal mentions
+- `## :books: Worth learning` — merged in from `educational_cache.json` (see weekly sweep)
+
+Stamp the intro line with the last-refreshed date, and tell Rachael she can tick any item
+off to have it drop at the next refresh. Use the **real** current date (see hard gate 5):
+
+```bash
+date '+Last refreshed: %Y-%m-%d'
+```
+
+Confirm the write landed and report the Canvas permalink.
+
+---
+
+## Weekly educational sweep
+
+Runs **weekly**, not daily — sweeping years of history every morning wastes calls.
+Cache the result and merge it into the daily Canvas.
+
+1. **Multi-pass keyword sweep** across full history (keyword-only, AND-joined, so one
+   pass per signal term). Use the keywords and filters from
+   `scope.json.educational_mining`: `tip`, `TIL`, `how to`, `lesson`, `gotcha`,
+   `best practice`, `trick`, `walkthrough`, `skill`, plus `has:link`.
+2. **Boost** the high-signal channels and senior authors listed in
+   `scope.json.educational_mining` → `boost_channels` / `boost_authors`.
+3. **Dedupe** across passes (same permalink = one item). **Rank** by reactions,
+   recency, and author weight. Keep the top N (`keep_top_n`, default 8).
+4. **Summarize** each into a "Worth learning" entry: one-line takeaway + source
+   permalink. Write the set to `educational_cache.json` in the skill dir with a
+   `generated_at` timestamp.
+5. The next daily run merges this cache into the Canvas "Worth learning" section.
+
+```bash
+SKILL_DIR="$HOME/.claude/skills/slack-daily-brief"
+[ -d "$SKILL_DIR" ] || SKILL_DIR=".claude/skills/slack-daily-brief"
+# Is the cache 7+ days old or missing? Then a sweep is due. Use -mtime +6, not +7:
+# find truncates age to whole days, so +7 only matches at 8 days and a weekly
+# schedule would skip every other run. +6 matches a cache that is 7 days old.
+CACHE="$SKILL_DIR/educational_cache.json"
+if [ -f "$CACHE" ]; then
+  find "$SKILL_DIR" -maxdepth 1 -name 'educational_cache.json' -mtime +6 -print | grep -q . \
+    && echo "SWEEP_DUE: cache 7+ days old" || echo "SWEEP_FRESH"
+else
+  echo "SWEEP_DUE: no cache yet"
+fi
+```
+
+Aim for genuinely useful past knowledge, not noise. If a sweep surfaces mostly
+chatter, raise the ranking bar rather than padding the list.
+
+---
+
+## Draft a message
+
+Draft-first, always. Never auto-send to a client or shared channel.
+
+1. Draft the message and run it through the `humanizing` skill so it sounds like
+   Rachael, not a bot.
+2. Present the draft to Rachael for approval via `slack_send_message_draft`.
+3. Only schedule (`slack_schedule_message`) or send after she approves. For recurring
+   cadence, schedule through the scheduler — never from a chat instance.
+4. Auto-send is allowed **only** for templates explicitly listed in
+   `scope.json.autosend.allowed_templates`. When that list is empty, send nothing
+   automatically.
+
+---
+
+## Loop & schedule (run this daily)
+
+Chat instances cannot wake themselves, so the every-morning requirement runs in
+Claude Code via `/loop` plus `/schedule`:
+
+- **Daily brief + Canvas refresh:** schedule `/slack-daily-brief` for the morning, or
+  run it on a `/loop` interval during working hours.
+- **Weekly educational sweep:** schedule `/slack-daily-brief learn` once a week. The
+  daily run merges the cached result, so the Canvas always shows the latest learnings.
+
+Tell Rachael the exact `/schedule` and `/loop` invocations to paste, then suggest
+running the daily brief by hand for three mornings to tune format before locking the
+schedule.
+
+---
+
+## Definition of done
+
+- The brief catches what Rachael would have flagged herself (validate across three
+  manual mornings before scheduling).
+- The Canvas updates idempotently in a private location with working permalinks.
+- The "Worth learning" section surfaces real knowledge, not noise.
+- No client-facing message goes out without explicit per-message or per-template approval.
